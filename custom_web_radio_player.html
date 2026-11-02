@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aetheria Web Radio</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    
+    /* Custom Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.7);
+    }
+
+    /* Vinyl Rotation Animation */
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 20s linear infinite;
+    }
+    .paused-animation {
+      animation-play-state: paused;
+    }
+
+    /* Range Input Custom Styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 9999px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 14px;
+      width: 14px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.8);
+      margin-top: -4px;
+      transition: transform 0.1s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    /* Glassmorphism Backgrounds */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+
+<body class="h-full min-h-screen flex items-center justify-center relative overflow-x-hidden p-3 sm:p-6 select-none">
+
+  <!-- Dynamic Ambient Background Glow -->
+  <div id="ambient-bg" class="fixed inset-0 transition-all duration-1000 ease-out opacity-40 blur-3xl scale-110 pointer-events-none z-0">
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-pulse"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-pulse" style="animation-delay: 2s;"></div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="w-full max-w-5xl glass-panel rounded-3xl shadow-2xl overflow-hidden z-10 flex flex-col lg:flex-row my-auto border border-white/10">
+
+    <!-- Left Section: Player & Visuals -->
+    <section class="lg:w-7/12 p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 relative">
+      
+      <!-- Top Bar: Station Header & Status -->
+      <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center space-x-3">
+          <span class="relative flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <h1 class="text-xs font-bold tracking-widest text-indigo-400 uppercase">Aetheria Live FM</h1>
+        </div>
+        <div class="bg-indigo-950/60 border border-indigo-500/30 text-indigo-300 text-xs px-3 py-1 rounded-full flex items-center gap-2">
+          <i class="fa-solid fa-radio text-indigo-400"></i>
+          <span id="genre-badge">Lo-Fi & Chill</span>
+        </div>
+      </div>
+
+      <!-- Center Display: Album Art & Visualizer -->
+      <div class="flex flex-col items-center justify-center my-4 relative">
+        <!-- Record / Cover Art Container -->
+        <div class="relative group my-4">
+          <!-- Outer Vinyl Frame -->
+          <div id="vinyl-disc" class="w-48 h-48 sm:w-60 sm:h-60 rounded-full bg-slate-900 border-4 border-slate-800 shadow-2xl flex items-center justify-center animate-spin-slow paused-animation relative overflow-hidden transition-transform duration-500">
+            <!-- Vinyl Groove Rings -->
+            <div class="absolute inset-2 border border-slate-700/40 rounded-full"></div>
+            <div class="absolute inset-6 border border-slate-700/40 rounded-full"></div>
+            <div class="absolute inset-10 border border-slate-700/40 rounded-full"></div>
+            <div class="absolute inset-14 border border-slate-700/40 rounded-full"></div>
+            
+            <!-- Album Artwork Center Image -->
+            <img id="album-art" src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600&auto=format&fit=crop" alt="Album Cover" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover shadow-lg border-2 border-slate-950 z-10 transition-all duration-500">
+          </div>
+          <!-- Glow Accent -->
+          <div id="art-glow" class="absolute -inset-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur-xl opacity-20 transition duration-500 -z-10"></div>
+        </div>
+
+        <!-- Canvas Audio Frequency Visualizer -->
+        <div class="w-full h-12 mt-4 px-4">
+          <canvas id="visualizer" class="w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <!-- Song Meta Info -->
+      <div class="text-center mt-2 mb-4">
+        <h2 id="song-title" class="text-2xl sm:text-3xl font-extrabold text-white truncate tracking-tight">Sunset Dreams</h2>
+        <p id="artist-name" class="text-sm sm:text-base text-slate-400 font-medium truncate mt-1">Kalaido & Chillhop</p>
+      </div>
+
+      <!-- Controls & Progress Section -->
+      <div class="space-y-4">
+        <!-- Progress Bar & Time Info -->
+        <div>
+          <div class="relative flex items-center">
+            <input type="range" id="progress-bar" min="0" max="100" value="0" step="0.1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none accent-indigo-500">
+          </div>
+          <div class="flex justify-between text-xs font-semibold text-slate-400 mt-2 px-1">
+            <span id="current-time">0:00</span>
+            <span id="total-duration">0:00</span>
+          </div>
+        </div>
+
+        <!-- Main Buttons Bar -->
+        <div class="flex items-center justify-between px-2 sm:px-6">
+          <!-- Shuffle Button -->
+          <button id="shuffle-btn" title="Shuffle Playlist" class="text-slate-400 hover:text-white transition p-2 text-lg">
+            <i class="fa-solid fa-shuffle"></i>
+          </button>
+
+          <!-- Navigation & Play Container -->
+          <div class="flex items-center space-x-4 sm:space-x-6">
+            <button id="prev-btn" title="Previous Song" class="text-slate-300 hover:text-white active:scale-95 transition p-3 text-xl">
+              <i class="fa-solid fa-backward-step"></i>
+            </button>
+
+            <button id="play-btn" title="Play / Pause" class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-indigo-600/40 transition-all duration-200">
+              <i id="play-icon" class="fa-solid fa-play text-xl ml-1"></i>
+            </button>
+
+            <button id="next-btn" title="Next Song" class="text-slate-300 hover:text-white active:scale-95 transition p-3 text-xl">
+              <i class="fa-solid fa-forward-step"></i>
+            </button>
+          </div>
+
+          <!-- Loop Button -->
+          <button id="loop-btn" title="Repeat Track" class="text-slate-400 hover:text-white transition p-2 text-lg">
+            <i class="fa-solid fa-repeat"></i>
+          </button>
+        </div>
+
+        <!-- Volume Controller -->
+        <div class="flex items-center space-x-3 bg-slate-900/60 px-4 py-2.5 rounded-2xl border border-white/5 max-w-xs mx-auto">
+          <button id="mute-btn" class="text-slate-400 hover:text-indigo-400 transition">
+            <i id="volume-icon" class="fa-solid fa-volume-high text-sm"></i>
+          </button>
+          <input type="range" id="volume-bar" min="0" max="1" value="0.8" step="0.01" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none accent-indigo-500">
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Section: Interactive Playlist -->
+    <section class="lg:w-5/12 p-6 bg-slate-900/40 flex flex-col justify-between">
+      <div>
+        <!-- Playlist Title & Counter -->
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-list-ul text-indigo-400"></i> Fixed Playlist
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">Stream curated copyright-free music</p>
+          </div>
+          <span id="playlist-count" class="text-xs font-semibold bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">6 Tracks</span>
+        </div>
+
+        <!-- Song List Container -->
+        <div id="playlist-container" class="space-y-2.5 max-h-[380px] lg:max-h-[460px] overflow-y-auto pr-1">
+          <!-- Dynamic rendering via JS -->
+        </div>
+      </div>
+
+      <!-- Station Info Footer -->
+      <div class="mt-6 pt-4 border-t border-slate-800/80 text-xs text-slate-400 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-shield-halved text-emerald-400"></i> Copyright Free Media
+        </span>
+        <span class="text-slate-400 hover:text-white transition cursor-pointer" onclick="alert('Shortcuts:\nSpace: Play/Pause\nRight Arrow: Next Track\nLeft Arrow: Prev Track\nM: Mute/Unmute')">
+          <i class="fa-solid fa-keyboard mr-1"></i> Shortcuts
+        </span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Audio Element -->
+  <audio id="audio-player" crossorigin="anonymous" preload="metadata"></audio>
+
+  <!-- Application Logic -->
+  <script>
+    // Fixed Song Playlist Data (Using verified public domain & royalty-free music streams)
+    const playlist = [
+      {
+        id: 0,
+        title: "Lofi Study Beats",
+        artist: "FASSounds",
+        duration: "2:25",
+        genre: "Lo-Fi",
+        cover: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600&auto=format&fit=crop",
+        src: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"
+      },
+      {
+        id: 1,
+        title: "Ambient Chillout Groove",
+        artist: "Coma-Media",
+        duration: "2:41",
+        genre: "Ambient",
+        cover: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=600&auto=format&fit=crop",
+        src: "https://cdn.pixabay.com/download/audio/2022/08/02/audio_884fe92db1.mp3?filename=ambient-classical-guitar-144998.mp3"
+      },
+      {
+        id: 2,
+        title: "Electronic Sunset Drive",
+        artist: "AlexGrohl",
+        duration: "2:12",
+        genre: "Synthwave",
+        cover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=600&auto=format&fit=crop",
+        src: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=electronic-future-beats-117890.mp3"
+      },
+      {
+        id: 3,
+        title: "Acoustic Breeze",
+        artist: "Benjamin Tissot",
+        duration: "2:37",
+        genre: "Acoustic",
+        cover: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?q=80&w=600&auto=format&fit=crop",
+        src: "https://www.bensound.com/bensound-music/bensound-acousticbreeze.mp3"
+      },
+      {
+        id: 4,
+        title: "Chill Gaming Vibe",
+        artist: "Lesfm",
+        duration: "2:04",
+        genre: "Lo-Fi Beats",
+        cover: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=600&auto=format&fit=crop",
+        src: "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=chill-abstract-intention-12099.mp3"
+      },
+      {
+        id: 5,
+        title: "Modern Jazz Hop",
+        artist: "SoulProdMusic",
+        duration: "2:15",
+        genre: "Jazz Chill",
+        cover: "https://images.unsplash.com/photo-1487180144351-b8472da7d491?q=80&w=600&auto=format&fit=crop",
+        src: "https://cdn.pixabay.com/download/audio/2022/11/06/audio_c4091a92e1.mp3?filename=good-night-160166.mp3"
+      }
+    ];
+
+    // State Variables
+    let currentTrackIndex = 0;
+    let isPlaying = false;
+    let isShuffle = false;
+    let isLoop = false;
+    let audioCtx, analyser, dataArray, source;
+    let visualizerInitialized = false;
+
+    // DOM Elements
+    const audio = document.getElementById("audio-player");
+    const playBtn = document.getElementById("play-btn");
+    const playIcon = document.getElementById("play-icon");
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
+    const shuffleBtn = document.getElementById("shuffle-btn");
+    const loopBtn = document.getElementById("loop-btn");
+    const progressBar = document.getElementById("progress-bar");
+    const volumeBar = document.getElementById("volume-bar");
+    const muteBtn = document.getElementById("mute-btn");
+    const volumeIcon = document.getElementById("volume-icon");
+    const songTitle = document.getElementById("song-title");
+    const artistName = document.getElementById("artist-name");
+    const albumArt = document.getElementById("album-art");
+    const genreBadge = document.getElementById("genre-badge");
+    const currentTimeEl = document.getElementById("current-time");
+    const totalDurationEl = document.getElementById("total-duration");
+    const playlistContainer = document.getElementById("playlist-container");
+    const vinylDisc = document.getElementById("vinyl-disc");
+    const artGlow = document.getElementById("art-glow");
+    const ambientBg = document.getElementById("ambient-bg");
+    const canvas = document.getElementById("visualizer");
+    const canvasCtx = canvas.getContext("2d");
+
+    // Initialize App on Window Load
+    window.onload = () => {
+      renderPlaylist();
+      loadTrack(currentTrackIndex);
+      setupAudioListeners();
+      setupVisualizerCanvas();
+      setupKeyboardControls();
+    };
+
+    // Render Playlist UI
+    function renderPlaylist() {
+      playlistContainer.innerHTML = "";
+      playlist.forEach((track, index) => {
+        const isSelected = index === currentTrackIndex;
+        const card = document.createElement("div");
+        card.className = `flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all duration-200 border ${
+          isSelected
+            ? "bg-indigo-600/20 border-indigo-500/50 text-white shadow-lg shadow-indigo-950/40"
+            : "bg-slate-950/40 border-white/5 text-slate-300 hover:bg-slate-800/50 hover:border-white/10"
+        }`;
+        
+        card.onclick = () => selectTrack(index);
+
+        card.innerHTML = `
+          <div class="flex items-center space-x-3 truncate pr-2">
+            <div class="relative flex-shrink-0 w-10 h-10">
+              <img src="${track.cover}" alt="${track.title}" class="w-10 h-10 rounded-xl object-cover">
+              ${
+                isSelected && isPlaying
+                  ? `<div class="absolute inset-0 bg-indigo-900/60 rounded-xl flex items-center justify-center">
+                       <i class="fa-solid fa-wave-square text-indigo-400 text-xs animate-bounce"></i>
+                     </div>`
+                  : ''
+              }
+            </div>
+            <div class="truncate">
+              <h4 class="text-xs font-bold ${isSelected ? 'text-indigo-300' : 'text-slate-200'} truncate">${track.title}</h4>
+              <p class="text-[11px] text-slate-400 truncate">${track.artist}</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3 flex-shrink-0">
+            <span class="text-[10px] bg-slate-800/80 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700/50">${track.genre}</span>
+            <span class="text-xs text-slate-400 font-medium">${track.duration}</span>
+          </div>
+        `;
+        playlistContainer.appendChild(card);
+      });
+      document.getElementById("playlist-count").innerText = `${playlist.length} Tracks`;
+    }
+
+    // Load Track Data into Player
+    function loadTrack(index) {
+      const track = playlist[index];
+      audio.src = track.src;
+      songTitle.innerText = track.title;
+      artistName.innerText = track.artist;
+      albumArt.src = track.cover;
+      genreBadge.innerText = track.genre;
+
+      // Handle Image Fallback safely
+      albumArt.onerror = () => {
+        albumArt.src = "https://placehold.co/400x400/1e293b/ffffff?text=Radio+Track";
+      };
+
+      // Reset progress
+      progressBar.value = 0;
+      updateProgressBarBackground();
+      currentTimeEl.innerText = "0:00";
+      totalDurationEl.innerText = track.duration;
+
+      renderPlaylist();
+    }
+
+    // Toggle Play / Pause
+    function togglePlay() {
+      if (!visualizerInitialized) {
+        initAudioContext();
+      }
+
+      if (isPlaying) {
+        pauseTrack();
+      } else {
+        playTrack();
+      }
+    }
+
+    function playTrack() {
+      audio.play().then(() => {
+        isPlaying = true;
+        playIcon.className = "fa-solid fa-pause text-xl";
+        vinylDisc.classList.remove("paused-animation");
+        artGlow.classList.remove("opacity-20");
+        artGlow.classList.add("opacity-60");
+        renderPlaylist();
+      }).catch(err => {
+        console.log("Autoplay restriction or playback error: ", err);
+      });
+    }
+
+    function pauseTrack() {
+      audio.pause();
+      isPlaying = false;
+      playIcon.className = "fa-solid fa-play text-xl ml-1";
+      vinylDisc.classList.add("paused-animation");
+      artGlow.classList.remove("opacity-60");
+      artGlow.classList.add("opacity-20");
+      renderPlaylist();
+    }
+
+    function selectTrack(index) {
+      currentTrackIndex = index;
+      loadTrack(currentTrackIndex);
+      playTrack();
+    }
+
+    function nextTrack() {
+      if (isShuffle) {
+        currentTrackIndex = Math.floor(Math.random() * playlist.length);
+      } else {
+        currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+      }
+      loadTrack(currentTrackIndex);
+      playTrack();
+    }
+
+    function prevTrack() {
+      if (audio.currentTime > 3) {
+        audio.currentTime = 0;
+        return;
+      }
+      currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+      loadTrack(currentTrackIndex);
+      playTrack();
+    }
+
+    // Audio Event Listeners
+    function setupAudioListeners() {
+      audio.addEventListener("timeupdate", () => {
+        if (!isNaN(audio.duration)) {
+          const progressPercent = (audio.currentTime / audio.duration) * 100;
+          progressBar.value = progressPercent;
+          updateProgressBarBackground();
+          currentTimeEl.innerText = formatTime(audio.currentTime);
+          totalDurationEl.innerText = formatTime(audio.duration);
+        }
+      });
+
+      audio.addEventListener("ended", () => {
+        if (isLoop) {
+          audio.currentTime = 0;
+          playTrack();
+        } else {
+          nextTrack();
+        }
+      });
+
+      // Progress bar scrubbing
+      progressBar.addEventListener("input", (e) => {
+        if (!isNaN(audio.duration)) {
+          const seekTime = (e.target.value / 100) * audio.duration;
+          audio.currentTime = seekTime;
+          updateProgressBarBackground();
+        }
+      });
+
+      // Volume Control
+      volumeBar.addEventListener("input", (e) => {
+        audio.volume = e.target.value;
+        updateVolumeIcon(e.target.value);
+        updateVolumeBarBackground();
+      });
+
+      muteBtn.addEventListener("click", () => {
+        audio.muted = !audio.muted;
+        if (audio.muted) {
+          volumeIcon.className = "fa-solid fa-volume-xmark text-sm text-red-400";
+        } else {
+          updateVolumeIcon(audio.volume);
+        }
+      });
+
+      // Playback Control Click Handlers
+      playBtn.addEventListener("click", togglePlay);
+      nextBtn.addEventListener("click", nextTrack);
+      prevBtn.addEventListener("click", prevTrack);
+
+      shuffleBtn.addEventListener("click", () => {
+        isShuffle = !isShuffle;
+        shuffleBtn.classList.toggle("text-indigo-400", isShuffle);
+        shuffleBtn.classList.toggle("text-slate-400", !isShuffle);
+      });
+
+      loopBtn.addEventListener("click", () => {
+        isLoop = !isLoop;
+        loopBtn.classList.toggle("text-indigo-400", isLoop);
+        loopBtn.classList.toggle("text-slate-400", !isLoop);
+      });
+
+      updateVolumeBarBackground();
+    }
+
+    // Helper: Progress Bar Active Gradient
+    function updateProgressBarBackground() {
+      const val = progressBar.value;
+      progressBar.style.background = `linear-gradient(to right, #6366f1 0%, #a855f7 ${val}%, #1e293b ${val}%, #1e293b 100%)`;
+    }
+
+    function updateVolumeBarBackground() {
+      const val = volumeBar.value * 100;
+      volumeBar.style.background = `linear-gradient(to right, #6366f1 0%, #6366f1 ${val}%, #1e293b ${val}%, #1e293b 100%)`;
+    }
+
+    function updateVolumeIcon(vol) {
+      if (vol == 0) {
+        volumeIcon.className = "fa-solid fa-volume-off text-sm";
+      } else if (vol < 0.5) {
+        volumeIcon.className = "fa-solid fa-volume-low text-sm";
+      } else {
+        volumeIcon.className = "fa-solid fa-volume-high text-sm";
+      }
+    }
+
+    // Helper: Time Formatter
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // Keyboard Shortcuts
+    function setupKeyboardControls() {
+      window.addEventListener("keydown", (e) => {
+        if (e.code === "Space") {
+          e.preventDefault();
+          togglePlay();
+        } else if (e.code === "ArrowRight") {
+          nextTrack();
+        } else if (e.code === "ArrowLeft") {
+          prevTrack();
+        } else if (e.key.toLowerCase() === "m") {
+          muteBtn.click();
+        }
+      });
+    }
+
+    // Visualizer Canvas & Web Audio API Setup
+    function setupVisualizerCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+      window.addEventListener("resize", () => {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+      });
+    }
+
+    function initAudioContext() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        analyser = audioCtx.createAnalyser();
+        source = audioCtx.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        analyser.fftSize = 64;
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+        visualizerInitialized = true;
+
+        drawVisualizer();
+      } catch (err) {
+        console.log("Web Audio API not supported or restricted:", err);
+        // Fallback simulated visualizer if AudioContext is restricted by CORS
+        drawSimulatedVisualizer();
+      }
+    }
+
+    // Canvas Frequency Visualizer Loop
+    function drawVisualizer() {
+      requestAnimationFrame(drawVisualizer);
+
+      canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!isPlaying || !analyser) {
+        drawIdleVisualizer();
+        return;
+      }
+
+      analyser.getByteFrequencyData(dataArray);
+
+      const barWidth = (canvas.width / dataArray.length) * 1.5;
+      let x = 0;
+
+      for (let i = 0; i < dataArray.length; i++) {
+        const barHeight = (dataArray[i] / 255) * canvas.height;
+
+        const gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
+        gradient.addColorStop(0, '#6366f1');
+        gradient.addColorStop(1, '#a855f7');
+
+        canvasCtx.fillStyle = gradient;
+        canvasCtx.beginPath();
+        canvasCtx.roundRect(x, canvas.height - barHeight, barWidth - 3, barHeight, [4, 4, 0, 0]);
+        canvasCtx.fill();
+
+        x += barWidth;
+      }
+    }
+
+    function drawIdleVisualizer() {
+      const bars = 24;
+      const barWidth = canvas.width / bars;
+      for (let i = 0; i < bars; i++) {
+        canvasCtx.fillStyle = "rgba(99, 102, 241, 0.2)";
+        canvasCtx.beginPath();
+        canvasCtx.roundRect(i * barWidth, canvas.height - 4, barWidth - 3, 4, [2, 2, 0, 0]);
+        canvasCtx.fill();
+      }
+    }
+
+    function drawSimulatedVisualizer() {
+      requestAnimationFrame(drawSimulatedVisualizer);
+      canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const bars = 24;
+      const barWidth = canvas.width / bars;
+
+      for (let i = 0; i < bars; i++) {
+        const barHeight = isPlaying ? Math.random() * (canvas.height - 10) + 5 : 4;
+        const gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
+        gradient.addColorStop(0, '#6366f1');
+        gradient.addColorStop(1, '#ec4899');
+
+        canvasCtx.fillStyle = isPlaying ? gradient : "rgba(99, 102, 241, 0.2)";
+        canvasCtx.beginPath();
+        canvasCtx.roundRect(i * barWidth, canvas.height - barHeight, barWidth - 3, barHeight, [4, 4, 0, 0]);
+        canvasCtx.fill();
+      }
+    }
+  </script>
+</body>
+</html>
